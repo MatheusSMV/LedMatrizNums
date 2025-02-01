@@ -11,6 +11,6 @@ Este código controla uma matriz de 25 LEDs WS2812 conectada ao Raspberry Pi Pic
 
 O código garante leituras confiáveis dos botões com debounce e atualiza continuamente a matriz de LEDs de acordo com a animação selecionada.
 
-[Vídeo de explicação e demonstração](https://youtu.be/ImExR7_KGeI)
+[Vídeo de explicação e demonstração](https://youtu.be/dikOrUGiTyk)
 
 # Matheus Santos Souza
