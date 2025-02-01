@@ -6,26 +6,28 @@
 #include "hardware/timer.h"
 #include "ws2812.pio.h"
 
+// Definição das variáveis globais
+#define IS_RGBW false // Apenas o RGB sem LED Branco (RGBWhite)
+#define NUM_PIXELS 25 // Matriz 5x5
+#define WS2812_PIN 7 // A Matriz de LED GPIO 7
+#define botao_a 5 // Botão A GPIO 5
+#define botao_b 6 // Botão B GPIO 6
+#define led_red 13 // O LED Vermelho GPIO 13
+#define DEBOUNCE_MS 200 // Tempo para evitar múltiplas leituras
 
-//Definição das veriáveis globais
-#define IS_RGBW false //Apenas o RGB sem LED Branco (RGBWhite)
-#define NUM_PIXELS 25 //Matriz 5x5
-#define WS2812_PIN 7 //A Matriz de LED GPIO 7
-#define botao_a 5 //Botão A GPIO 5
-#define botao_b 6 //Botão B GPIO 6
-#define led_red 13 //O LED Vermelho GPIO 13
-#define DEBOUNCE_MS 200 //Tempo para evitar múltiplas leituras
-
-uint8_t led_r = 50;  //Força da Luz
+uint8_t led_r = 50;  // Força da Luz
 uint8_t led_g = 0;  
 uint8_t led_b = 0;   
-volatile bool led_red_state = false; //Estado do LED vermelho
+volatile bool led_red_state = false; // Estado do LED vermelho
 
-//Buffer de LEDs da matriz 5x5 - Armazenamento do Estado
+// Buffer de LEDs da matriz 5x5 - Armazenamento do Estado
 bool led_buffer[NUM_PIXELS];
 
 // Variável para controlar a animação atual
 volatile int indice_animacao = 0; // Começa em 0 - Número 0
+
+// Variável para controlar a cor atual
+volatile int cor_atual = 0; // 0: Vermelho, 1: Verde, 2: Azul
 
 // Função para enviar cor ao LED
 static inline void put_pixel(uint32_t pixel_grb)
@@ -59,11 +61,11 @@ void animacao_0()
 void animacao_1()
 {
     bool animacao[5][5] = {
-        {1, 0, 0, 0, 0},
-        {0, 0, 0, 0, 1},
-        {1, 0, 1, 0, 0},
-        {0, 0, 0, 1, 1},
-        {1, 0, 0, 0, 0}
+        {0, 1, 1, 1, 0},
+        {0, 0, 1, 0, 0},
+        {0, 0, 1, 0, 0},
+        {0, 1, 1, 0, 0},
+        {0, 0, 1, 0, 0}
     };
     for (int k = 0; k < 5; k++) {
         for (int l = 0; l < 5; l++) {
@@ -155,11 +157,11 @@ void animacao_6()
 void animacao_7()
 {
     bool animacao[5][5] = {
-    {1, 0, 0, 0, 0},   
-     {0, 0, 0, 0, 1}, 
-     {1, 0, 0, 0, 0}, 
-     {0, 1, 0, 0, 1}, 
-     {1, 1, 1, 0, 0},
+     {0, 1, 0, 0, 0},   
+     {0, 0, 0, 1, 0}, 
+     {1, 1, 1, 0, 0}, 
+     {0, 1, 0, 1, 0}, 
+     {0, 1, 1, 0, 0},
     };
     for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 5; j++) {
@@ -248,6 +250,7 @@ void gpio_irq_handler(uint gpio, uint32_t events)
         if (absolute_time_diff_us(ultimo_tempo_a, get_absolute_time()) > DEBOUNCE_MS * 1000) {
             printf("Botão A pressionado (GPIO %d). Índice antes: %d\n", gpio, indice_animacao);
             indice_animacao = (indice_animacao + 1) % 10; // Incrementa o índice da animação
+            cor_atual = (cor_atual + 1) % 3; // Alterna a cor
             printf("Índice depois: %d\n", indice_animacao);
             ultimo_tempo_a = get_absolute_time();
         }
@@ -261,6 +264,7 @@ void gpio_irq_handler(uint gpio, uint32_t events)
             } else {
                 indice_animacao--; // Decrementa o índice da animação
             }
+            cor_atual = (cor_atual + 2) % 3; // Alterna a cor (volta uma cor)
             printf("Índice depois: %d\n", indice_animacao);
             ultimo_tempo_b = get_absolute_time();
         }
@@ -279,41 +283,52 @@ void configurar_botao(uint pin, gpio_irq_callback_t handler)
 // Callback da interrupção do timer
 bool piscar_led_red(struct repeating_timer *t)
 {
-    led_red_state = !led_red_state; //Alterna estado do LED vermelho
+    led_red_state = !led_red_state; // Alterna estado do LED vermelho
     gpio_put(led_red, led_red_state);
-    return true; //Mantém a repetição do timer
+    return true; // Mantém a repetição do timer
 }
 
 int main()
 {
-    stdio_init_all(); //Inicializa comunicação serial 
+    stdio_init_all(); // Inicializa comunicação serial 
     
-    //Inicializa PIO e matriz de LEDs
+    // Inicializa PIO e matriz de LEDs
     PIO pio = pio0;
     int sm = 0;
     uint offset = pio_add_program(pio, &ws2812_program);
     ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, IS_RGBW);
 
-    //Configuração dos botões com interrupções usando o novo método
-    configurar_botao(botao_a, gpio_irq_handler); //Interrupção para o Botão A
-    configurar_botao(botao_b, gpio_irq_handler); //Interrupção para o Botão B
+    // Configuração dos botões com interrupções usando o novo método
+    configurar_botao(botao_a, gpio_irq_handler); // Interrupção para o Botão A
+    configurar_botao(botao_b, gpio_irq_handler); // Interrupção para o Botão B
 
-    //Configuração do LED vermelho
+    // Configuração do LED vermelho
     gpio_init(led_red);
     gpio_set_dir(led_red, GPIO_OUT);
 
-    //Configuração do timer para piscar LED vermelho
+    // Configuração do timer para piscar LED vermelho
     struct repeating_timer timer;
     add_repeating_timer_ms(-100, piscar_led_red, NULL, &timer); // Chama a função a cada 100ms
 
-    //Inicializa com a animação 0
+    // Inicializa com a animação 0
     selecionar_animacao();
 
     while (1)
     {
         //Atualiza a matriz de LEDs com base na animação atual
         selecionar_animacao();
-        set_one_led(led_r, led_g, led_b);
+        switch (cor_atual) {
+            case 0: set_one_led(50, 0, 0); break; // Vermelho
+            case 1: set_one_led(0, 50, 0); break; // Verde
+            case 2: set_one_led(0, 0, 50); break; // Azul
+            case 3: set_one_led(50, 0, 0); break; // Vermelho
+            case 4: set_one_led(0, 50, 0); break; // Verde
+            case 5: set_one_led(0, 0, 50); break; // Azul
+            case 6: set_one_led(50, 0, 0); break; // Vermelho
+            case 7: set_one_led(0, 50, 0); break; // Verde
+            case 8: set_one_led(0, 0, 50); break; // Azul
+            case 9: set_one_led(50, 0, 0); break; // Vermelho
+        }
 
         sleep_ms(10); // Reduz o uso da CPU
     }
