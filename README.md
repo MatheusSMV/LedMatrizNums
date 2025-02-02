@@ -17,4 +17,11 @@ O código garante leituras confiáveis dos botões com debounce e atualiza conti
 
 Matheus Santos Souza
 
+## Código Base
+
+Professor Wilton Lacerda Silda
+
+## Código Base Obtenção
+Código obtido do GitHub disponibilizado pelo própio docente: [GitHubProfessorWilton](https://github.com/wiltonlacerda/EmbarcaTechU4C4.git)
+
 
