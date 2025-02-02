@@ -13,4 +13,8 @@ O código garante leituras confiáveis dos botões com debounce e atualiza conti
 
 [Vídeo de explicação e demonstração](https://youtu.be/dikOrUGiTyk)
 
-# Matheus Santos Souza
+# Autor
+
+Matheus Santos Souza
+
+
